@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-const connectDB = require("./config/db");
+const connectDB = require("./config/db.js");
+const requestRoutes = require("./routes/requestRoutes.js");
 
 const app = express();
 
@@ -14,6 +15,8 @@ app.get("/", (req, res) => {
     message: "Maintenance Request Tracker API is running",
   });
 });
+
+app.use("/api/requests", requestRoutes);
 
 connectDB();
 
