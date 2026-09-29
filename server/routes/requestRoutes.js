@@ -8,10 +8,15 @@ const {
   createRequest,
   updateRequest,
   deleteRequest,
+  getRequestById
 } = require("../controllers/requestController.js");
 
 // Get all maintenance requests
 router.get("/", getAllRequests);
+
+//get a maintenance request by id
+
+router.get("/:id",getRequestById);
 
 // Create a new maintenance request
 router.post("/", createRequest);

@@ -90,10 +90,31 @@ const deleteRequest = async (req, res) => {
   }
 };
 
+const getRequestById = async (req, res) => {
+  try {
+    const request = await MaintenanceRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Maintenance request not found",
+      });
+    }
+
+    res.status(200).json(request);
+  } catch (error) {
+    res.status(400).json({
+      message: "Invalid request ID",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllRequests,
   createRequest,
   updateRequest,
   deleteRequest,
+  getRequestById
 }
+
 
