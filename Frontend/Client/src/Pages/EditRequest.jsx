@@ -22,10 +22,12 @@ const EditRequest = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const fetchRequest = async () => {
     try {
       setLoading(true);
+      setError("");
 
       const data = await getRequestById(id);
 
@@ -39,8 +41,12 @@ const EditRequest = () => {
         assignedTo: data.assignedTo || "",
       });
     } catch (error) {
-      console.error(error);
-      setError("Failed to load maintenance request.");
+      console.error("Failed to load request:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Failed to load maintenance request."
+      );
     } finally {
       setLoading(false);
     }
@@ -57,21 +63,71 @@ const EditRequest = () => {
       ...prev,
       [name]: value,
     }));
+
+    if (error) {
+      setError("");
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.title.trim()) {
+      return "Title is required.";
+    }
+
+    if (formData.title.trim().length < 3) {
+      return "Title must be at least 3 characters.";
+    }
+
+    if (!formData.description.trim()) {
+      return "Description is required.";
+    }
+
+    if (formData.description.trim().length < 10) {
+      return "Description must be at least 10 characters.";
+    }
+
+    if (!formData.location.trim()) {
+      return "Location is required.";
+    }
+
+    return "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
       setUpdating(true);
       setError("");
+      setSuccess("");
 
-      await updateRequest(id, formData);
+      await updateRequest(id, {
+        ...formData,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        location: formData.location.trim(),
+        assignedTo: formData.assignedTo.trim(),
+      });
 
-      navigate("/requests");
+      setSuccess("Maintenance request updated successfully!");
+
+      setTimeout(() => {
+        navigate("/requests");
+      }, 800);
     } catch (error) {
-      console.error(error);
-      setError("Failed to update maintenance request.");
+      console.error("Update request failed:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Failed to update maintenance request."
+      );
     } finally {
       setUpdating(false);
     }
@@ -79,7 +135,7 @@ const EditRequest = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         <p className="text-gray-600">Loading request...</p>
       </div>
     );
@@ -87,8 +143,19 @@ const EditRequest = () => {
 
   if (error && !formData.title) {
     return (
-      <div className="p-6">
-        <p className="text-red-600">{error}</p>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+            {error}
+          </div>
+
+          <button
+            onClick={() => navigate("/requests")}
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Back to Requests
+          </button>
+        </div>
       </div>
     );
   }
@@ -96,16 +163,28 @@ const EditRequest = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-2 text-2xl font-bold text-gray-800">
-          Edit Maintenance Request
-        </h1>
 
-        <p className="mb-6 text-gray-500">
-          Update the maintenance request details.
-        </p>
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">
+            Edit Maintenance Request
+          </h1>
 
+          <p className="mt-1 text-gray-500">
+            Update the maintenance request details.
+          </p>
+        </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            {success}
+          </div>
+        )}
+
+        {/* Error Message */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-100 p-3 text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -114,10 +193,11 @@ const EditRequest = () => {
           onSubmit={handleSubmit}
           className="space-y-5 rounded-xl bg-white p-6 shadow-sm"
         >
+
           {/* Title */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Title
+              Title <span className="text-red-500">*</span>
             </label>
 
             <input
@@ -125,15 +205,20 @@ const EditRequest = () => {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              maxLength={100}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               required
             />
+
+            <p className="mt-1 text-xs text-gray-400">
+              {formData.title.length}/100 characters
+            </p>
           </div>
 
           {/* Description */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Description
+              Description <span className="text-red-500">*</span>
             </label>
 
             <textarea
@@ -141,9 +226,14 @@ const EditRequest = () => {
               value={formData.description}
               onChange={handleChange}
               rows="4"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              maxLength={500}
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               required
             />
+
+            <p className="mt-1 text-xs text-gray-400">
+              {formData.description.length}/500 characters
+            </p>
           </div>
 
           {/* Category */}
@@ -156,7 +246,7 @@ const EditRequest = () => {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="Electrical">Electrical</option>
               <option value="Plumbing">Plumbing</option>
@@ -170,7 +260,7 @@ const EditRequest = () => {
           {/* Location */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Location
+              Location <span className="text-red-500">*</span>
             </label>
 
             <input
@@ -178,7 +268,8 @@ const EditRequest = () => {
               name="location"
               value={formData.location}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              maxLength={150}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               required
             />
           </div>
@@ -193,7 +284,7 @@ const EditRequest = () => {
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
@@ -211,7 +302,7 @@ const EditRequest = () => {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
@@ -231,18 +322,32 @@ const EditRequest = () => {
               value={formData.assignedTo}
               onChange={handleChange}
               placeholder="e.g. Maintenance Team"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-500"
+              maxLength={100}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
-          {/* Update Button */}
-          <button
-            type="submit"
-            disabled={updating}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {updating ? "Updating..." : "Update Request"}
-          </button>
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+
+            <button
+              type="button"
+              onClick={() => navigate("/requests")}
+              disabled={updating}
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={updating}
+              className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {updating ? "Updating..." : "Update Request"}
+            </button>
+
+          </div>
         </form>
       </div>
     </div>

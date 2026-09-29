@@ -8,6 +8,7 @@ const requestRoutes = require("./routes/requestRoutes.js");
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -20,7 +21,7 @@ app.use("/api/requests", requestRoutes);
 
 connectDB();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
