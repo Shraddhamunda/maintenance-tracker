@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5001/api/requests";
+const API_URL = "https://maintenance-tracker-production-ea6c.up.railway.app/api/requests";
 
 // Get all requests
 export const getRequests = async () => {
